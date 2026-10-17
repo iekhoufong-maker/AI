@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电脑性能测试 Benchmark</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #131a2b;
+            --bg-card: #1a2332;
+            --border: #2a3a52;
+            --text-primary: #e8edf5;
+            --text-secondary: #8b9bb4;
+            --accent: #00d4ff;
+            --accent-dim: #0099bb;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --danger: #ff4466;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 头部 */
+        header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #7b61ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* 总体评分面板 */
+        .score-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .score-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.05) 0%, transparent 60%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .total-score {
+            font-size: 5rem;
+            font-weight: 800;
+            color: var(--accent);
+            line-height: 1;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .score-label {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .rating {
+            display: inline-block;
+            padding: 8px 24px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        .rating.excellent { background: rgba(0, 255, 136, 0.15); color: var(--success); }
+        .rating.good { background: rgba(0, 212, 255, 0.15); color: var(--accent); }
+        .rating.fair { background: rgba(255, 170, 0, 0.15); color: var(--warning); }
+        .rating.poor { background: rgba(255, 68, 102, 0.15); color: var(--danger); }
+
+        /* 测试卡片网格 */
+        .tests-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .test-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .test-card:hover {
+            border-color: var(--accent-dim);
+            transform: translateY(-2px);
+        }
+
+        .test-card.running {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        }
+
+        .test-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .test-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .test-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .test-desc {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .test-result {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .test-score {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .test-unit {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 16px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .test-status {
+            text-align: center;
+            padding: 12px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* 按钮 */
+        .btn {
+            display: inline-block;
+            padding: 14px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #7b61ff);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .action-area {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        /* 系统信息 */
+        .sys-info {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .sys-info h3 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .info-item {
+            font-size: 0.9rem;
+        }
+
+        .info-item .label {
+            color: var(--text-secondary);
+        }
+
+        .info-item .value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* 动画 */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8rem; }
+            .total-score { font-size: 3rem; }
+            .tests-grid { grid-template-columns: 1fr; }
+            .container { padding: 12px; }
+            .score-panel { padding: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>电脑性能测试</h1>
+            <p class="subtitle">在浏览器中快速评估你的设备性能</p>
+        </header>
+
+        <!-- 总体评分 -->
+        <div class="score-panel">
+            <div class="score-label">综合性能得分</div>
+            <div class="total-score" id="totalScore">--</div>
+            <div class="rating" id="rating">等待测试</div>
+        </div>
+
+        <!-- 测试卡片 -->
+        <div class="tests-grid">
+            <!-- CPU 测试 -->
+            <div class="test-card" id="cpuCard">
+                <div class="test-header">
+                    <div class="test-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2">
+                            <rect x="4" y="4" width="16" height="16" rx="2"/>
+                            <rect x="9" y="9" width="6" height="6"/>
+                            <path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="test-title">CPU 运算测试</div>
+                        <div class="test-desc">数学计算与逻辑运算性能</div>
+                    </div>
+                </div>
+                <div class="test-result">
+                    <div class="test-score" id="cpuScore">--</div>
+                    <div class="test-unit" id="cpuUnit">分</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cpuProgress"></div>
+                </div>
+                <div class="test-status" id="cpuStatus">就绪</div>
+            </div>
+
+            <!-- 内存测试 -->
+            <div class="test-card" id="memoryCard">
+                <div class="test-header">
+                    <div class="test-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="10" rx="1"/>
+                            <path d="M6 11v2M10 11v2M14 11v2M18 11v2M6 21v-2M18 21v-2"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="test-title">内存带宽测试</div>
+                        <div class="test-desc">数据读写与内存访问速度</div>
+                    </div>
+                </div>
+                <div class="test-result">
+                    <div class="test-score" id="memoryScore">--</div>
+                    <div class="test-unit" id="memoryUnit">MB/s</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="memoryProgress"></div>
+                </div>
+                <div class="test-status" id="memoryStatus">就绪</div>
+            </div>
+
+            <!-- GPU 测试 -->
+            <div class="test-card" id="gpuCard">
+                <div class="test-header">
+                    <div class="test-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2">
+                            <rect x="2" y="6" width="20" height="12" rx="2"/>
+                            <circle cx="8" cy="12" r="2"/>
+                            <circle cx="16" cy="12" r="2"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="test-title">GPU 图形测试</div>
+                        <div class="test-desc">Canvas 渲染与图形处理能力</div>
+                    </div>
+                </div>
+                <div class="test-result">
+                    <div class="test-score" id="gpuScore">--</div>
+                    <div class="test-unit" id="gpuUnit">FPS</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="gpuProgress"></div>
+                </div>
+                <div class="test-status" id="gpuStatus">就绪</div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="action-area">
+            <button class="btn btn-primary" id="startBtn" onclick="runAllTests()">
+                开始性能测试
+            </button>
+        </div>
+
+        <!-- 系统信息 -->
+        <div class="sys-info">
+            <h3>系统信息</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="label">浏览器：</span>
+                    <span class="value" id="browserInfo">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">操作系统：</span>
+                    <span class="value" id="osInfo">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">CPU 核心数：</span>
+                    <span class="value" id="cpuCores">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">设备类型：</span>
+                    <span class="value" id="deviceType">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 系统信息获取 =====
+        function getSystemInfo() {
+            const ua = navigator.userAgent;
+            
+            // 浏览器
+            let browser = 'Unknown';
+            if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Chrome';
+            else if (ua.includes('Edg')) browser = 'Edge';
+            else if (ua.includes('Firefox')) browser = 'Firefox';
+            else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+            document.getElementById('browserInfo').textContent = browser;
+
+            // 操作系统
+            let os = 'Unknown';
+            if (ua.includes('Windows NT 10.0')) os = 'Windows 10/11';
+            else if (ua.includes('Windows NT 6.3')) os = 'Windows 8.1';
+            else if (ua.includes('Windows NT 6.1')) os = 'Windows 7';
+            else if (ua.includes('Mac OS X')) os = 'macOS';
+            else if (ua.includes('Android')) os = 'Android';
+            else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+            else if (ua.includes('Linux')) os = 'Linux';
+            document.getElementById('osInfo').textContent = os;
+
+            // CPU 核心数
+            document.getElementById('cpuCores').textContent = navigator.hardwareConcurrency || 'Unknown';
+
+            // 设备类型
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+            document.getElementById('deviceType').textContent = isMobile ? '移动设备' : '桌面设备';
+        }
+
+        // ===== CPU 测试 =====
+        async function runCPUTest() {
+            const card = document.getElementById('cpuCard');
+            const scoreEl = document.getElementById('cpuScore');
+            const statusEl = document.getElementById('cpuStatus');
+            const progressEl = document.getElementById('cpuProgress');
+
+            card.classList.add('running');
+            statusEl.innerHTML = '<span class="spinner"></span> 正在测试...';
+            progressEl.style.width = '10%';
+
+            // 让 UI 先更新
+            await new Promise(r => setTimeout(r, 100));
+
+            const startTime = performance.now();
+            let operations = 0;
+
+            // 测试持续时间（毫秒）
+            const testDuration = 2000;
+
+            while (performance.now() - startTime < testDuration) {
+                // 数学计算测试
+                for (let i = 0; i < 1000; i++) {
+                    Math.sqrt(i * 123.456);
+                    Math.sin(i) * Math.cos(i);
+                    Math.pow(i, 2.5);
+                }
+                
+                // 字符串处理测试
+                let str = '';
+                for (let i = 0; i < 100; i++) {
+                    str += i.toString();
+                }
+                str.split('').reverse().join('');
+
+                // 逻辑运算测试
+                for (let i = 0; i < 500; i++) {
+                    (i * 3 + 7) % 11;
+                    (i > 50) ? true : false;
+                }
+
+                operations++;
+                
+                // 更新进度
+                const elapsed = performance.now() - startTime;
+                progressEl.style.width = Math.min((elapsed / testDuration) * 100, 100) + '%';
+            }
+
+            const endTime = performance.now();
+            const duration = endTime - startTime;
+            
+            // 计算得分（基于每秒操作数）
+            const opsPerSecond = (operations / duration) * 1000;
+            const score = Math.round(opsPerSecond * 10);
+
+            scoreEl.textContent = score.toLocaleString();
+            statusEl.textContent = '完成';
+            progressEl.style.width = '100%';
+            card.classList.remove('running');
+
+            return score;
+        }
+
+        // ===== 内存测试 =====
+        async function runMemoryTest() {
+            const card = document.getElementById('memoryCard');
+            const scoreEl = document.getElementById('memoryScore');
+            const statusEl = document.getElementById('memoryStatus');
+            const progressEl = document.getElementById('memoryProgress');
+
+            card.classList.add('running');
+            statusEl.innerHTML = '<span class="spinner"></span> 正在测试...';
+            progressEl.style.width = '10%';
+
+            await new Promise(r => setTimeout(r, 100));
+
+            const arraySize = 100000;
+            let totalBytes = 0;
+            const startTime = performance.now();
+
+            // 写入测试
+            const arr = new Float64Array(arraySize);
+            for (let i = 0; i < 5; i++) {
+                for (let j = 0; j < arraySize; j++) {
+                    arr[j] = Math.random();
+                }
+                totalBytes += arraySize * 8;
+                progressEl.style.width = (10 + (i / 5) * 40) + '%';
+                await new Promise(r => setTimeout(r, 10));
+            }
+
+            // 读取测试
+            let sum = 0;
+            for (let i = 0; i < 5; i++) {
+                for (let j = 0; j < arraySize; j++) {
+                    sum += arr[j];
+                }
+                totalBytes += arraySize * 8;
+                progressEl.style.width = (50 + (i / 5) * 40) + '%';
+                await new Promise(r => setTimeout(r, 10));
+            }
+
+            // 排序测试（间接内存操作）
+            for (let i = 0; i < 3; i++) {
+                arr.sort();
+                totalBytes += arraySize * 8 * 2;
+                progressEl.style.width = '95%';
+                await new Promise(r => setTimeout(r, 10));
+            }
+
+            const endTime = performance.now();
+            const duration = (endTime - startTime) / 1000; // 转换为秒
+            
+            // 计算带宽（MB/s）
+            const bandwidth = Math.round((totalBytes / 1024 / 1024) / duration);
+
+            scoreEl.textContent = bandwidth.toLocaleString();
+            statusEl.textContent = '完成';
+            progressEl.style.width = '100%';
+            card.classList.remove('running');
+
+            // 归一化为分数（假设高端设备约 10000 MB/s）
+            return Math.min(Math.round(bandwidth / 100), 1000);
+        }
+
+        // ===== GPU 测试 =====
+        async function runGPUTest() {
+            const card = document.getElementById('gpuCard');
+            const scoreEl = document.getElementById('gpuScore');
+            const statusEl = document.getElementById('gpuStatus');
+            const progressEl = document.getElementById('gpuProgress');
+
+            card.classList.add('running');
+            statusEl.innerHTML = '<span class="spinner"></span> 正在测试...';
+            progressEl.style.width = '10%';
+
+            await new Promise(r => setTimeout(r, 100));
+
+            // 创建离屏 canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = 500;
+            canvas.height = 500;
+            const ctx = canvas.getContext('2d');
+
+            let frames = 0;
+            const testDuration = 2000;
+            const startTime = performance.now();
+
+            while (performance.now() - startTime < testDuration) {
+                // 绘制复杂图形
+                ctx.fillStyle = `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`;
+                ctx.fillRect(0, 0, 500, 500);
+
+                // 绘制多个圆形
+                for (let i = 0; i < 20; i++) {
+                    ctx.beginPath();
+                    ctx.arc(Math.random() * 500, Math.random() * 500, Math.random() * 50 + 10, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(${Math.random() * 360}, 70%, 60%, 0.5)`;
+                    ctx.fill();
+                }
+
+                // 绘制线条
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 10; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(Math.random() * 500, Math.random() * 500);
+                    ctx.lineTo(Math.random() * 500, Math.random() * 500);
+                    ctx.stroke();
+                }
+
+                frames++;
+                
+                const elapsed = performance.now() - startTime;
+                progressEl.style.width = Math.min((elapsed / testDuration) * 100, 100) + '%';
+            }
+
+            const endTime = performance.now();
+            const duration = (endTime - startTime) / 1000;
+            const fps = Math.round(frames / duration);
+
+            scoreEl.textContent = fps;
+            statusEl.textContent = '完成';
+            progressEl.style.width = '100%';
+            card.classList.remove('running');
+
+            // 归一化为分数
+            return Math.min(fps * 2, 1000);
+        }
+
+        // ===== 综合评分 =====
+        function calculateTotalScore(cpuScore, memoryScore, gpuScore) {
+            // 权重：CPU 40%，内存 30%，GPU 30%
+            const total = cpuScore * 0.4 + memoryScore * 0.3 + gpuScore * 0.3;
+            return Math.round(total);
+        }
+
+        function getRating(score) {
+            if (score >= 3000) return { text: '性能卓越', class: 'excellent' };
+            if (score >= 2000) return { text: '性能优秀', class: 'good' };
+            if (score >= 1000) return { text: '性能一般', class: 'fair' };
+            return { text: '性能较弱', class: 'poor' };
+        }
+
+        // ===== 主测试流程 =====
+        async function runAllTests() {
+            const btn = document.getElementById('startBtn');
+            btn.disabled = true;
+            btn.textContent = '测试进行中...';
+
+            // 重置所有状态
+            document.getElementById('totalScore').textContent = '--';
+            document.getElementById('rating').textContent = '测试中';
+            document.getElementById('rating').className = 'rating';
+
+            try {
+                // 依次运行测试
+                const cpuScore = await runCPUTest();
+                const memoryScore = await runMemoryTest();
+                const gpuScore = await runGPUTest();
+
+                // 计算总分
+                const totalScore = calculateTotalScore(cpuScore, memoryScore, gpuScore);
+                document.getElementById('totalScore').textContent = totalScore.toLocaleString();
+
+                // 评级
+                const rating = getRating(totalScore);
+                const ratingEl = document.getElementById('rating');
+                ratingEl.textContent = rating.text;
+                ratingEl.className = 'rating ' + rating.class;
+
+            } catch (error) {
+                console.error('测试出错:', error);
+                alert('测试过程中出现错误，请刷新页面重试');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '重新测试';
+        }
+
+        // ===== 初始化 =====
+        getSystemInfo();
+    </script>
+</body>
+</html>
